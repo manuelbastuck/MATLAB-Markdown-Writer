@@ -209,6 +209,49 @@ classdef Markdown < handle
             end
         end
             
+        function [MarkDown] = ConvertTable(Obj, Table)
+            columns = cell(1,width(Table));
+            for colIdx = 1:width(Table)
+                data = Table{:,colIdx};
+                if ~ischar(data)
+                    if isstring(data)
+                        data = char(data);
+                    elseif isnumeric(data)
+                        data = num2str(data);
+                    else
+                        % we could not convert the data to a char array and
+                        % will silently omit this column
+                        continue;
+                    end
+                end
+                columns{colIdx} = data;
+                
+                % add the header to each column
+                columns{colIdx}(3:end+2,:) = columns{colIdx};
+                columns{colIdx}(1,:) = ' ';
+                colName = Table.Properties.VariableNames{colIdx};
+                columns{colIdx}(1,1:length(colName)) = colName;
+                columns{colIdx}(2,:) = Obj.layout.tableHeader(1);
+            end
+            
+            columns(cellfun(@isempty,columns)) = [];
+            
+            % generate template separator char array
+            sep = repmat(Obj.layout.tableSpacer,height(Table)+2,1);
+            sep(2,sep(2,:)==' ') = Obj.layout.tableHeader(1);
+            sep = repmat({sep},1,length(columns)-1);
+            sep{end+1} = char.empty(height(Table)+2,0);
+            
+            % concatenate columns and separators
+            content = [columns;sep];
+            content = cat(2,content{:});
+            content(content==0) = 32; % replace NUL with space
+            MarkDown = [];
+            for i = 1:size(content,1)
+                MarkDown = cat(1, MarkDown, {sprintf('%s\n',content(i,:))});
+            end
+        end
+        
         function [MarkDown] = ConvertMatrix(Obj, Matrix, FormatStr)
             MarkDown = [];
             if (~ismatrix(Matrix))
@@ -445,6 +488,17 @@ classdef Markdown < handle
             markDown = Obj.ConvertStruct(Struct, PropertyList);
             
             Obj.ReplaceTag(Tag, sprintf('%s',markDown{:}));
+        end
+        
+        function AddTable(Obj, Table)
+            narginchk(2,2);
+            assert(~isempty(Obj.fileHandle), 'Output file not created');
+            
+            markDown = Obj.ConvertTable(Table);
+            for iLine = 1:length(markDown)
+                fwrite(Obj.fileHandle, sprintf('%s', markDown{iLine}));
+            end
+            fwrite(Obj.fileHandle, sprintf('\n')); %#ok<SPRINTFN>
         end
                
         function ReplaceTag(Obj, Tag, Text)

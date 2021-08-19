@@ -70,6 +70,19 @@ md.EndCode();
 
 
 
+% adding tables
+md.AddTitle('Adding tables', 2);
+md.AddText('Add tables usgin the **AddTable()** function.');
+md.BeginCode();
+NumColumn = (1:5)';
+CharColumn = char(65:69)';
+StringColumn = ["These"; "are"; "strings"; "in a"; "table"];
+myTable = table(NumColumn, CharColumn, StringColumn);
+md.EndCode();
+md.BeginCode();
+md.AddTable(myTable);
+md.EndCode();
+
 
 
 % adding arrays and matrices
